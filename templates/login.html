@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>商品后台管理系统</title>
+    <link rel="stylesheet" href="{% static "css/bootstrap.min.css" %}">
+    <script src="{% static "js/jquery-1.11.1.min.js" %}"></script>
+    <script src="{% static "js/bootstrap.min.js" %}"></script>
+    <script>
+         var countdown = 60;
+
+        function settime(obj) {
+            if (countdown == 0) {
+                obj.removeAttribute("disabled");
+                obj.value = "免费获取验证码";
+                countdown = 60;
+                return;
+            } else {
+                obj.setAttribute("disabled", true);
+                obj.value = "重新发送(" + countdown + ")";
+                countdown--;
+            }
+            setTimeout(function () {
+                    settime(obj)
+                }
+                , 1000)
+        }
+        $(function () {
+            // 点击获取验证码， 向后台发送请求验证码
+            $('#forcode').click(function () {
+               var rex = /^1[3-9]+\d{9}$/
+               if(rex.test($("#mobile").val())){
+                   $.ajax({
+                    url: "{% url "indexapp:get_code" %}",
+                    type: "POST",
+                    data: {mobile: $("#mobile").val()},       // 将手机号参数传至后台
+                    success: function (data) {
+                        if(data=="0"){
+                            alert("您发送的太频繁！")
+                        }
+                    }
+                });
+               }else {
+                   alert("您输入格式错误!")
+               }
+                // 向后台发送ajax请求获取验证码
+
+            });
+             // 用户发起登录请求
+                $("#loginButtonId").click(function () {
+                    $.ajax({
+                        url: "{% url "indexapp:loginlogic" %}",
+                        data: {mobile: $("#mobile").val(),code:$("#basic-url").val()},
+                        type: "post",
+                        success: function (data) {
+                            if(data=="1"){
+                                location.href="{% url "indexapp:index" %}"
+                            }else if(data=="2"){
+                                alert("验证码错误！")
+                            }else {
+                                alert("您输入错误！请重新输入！")
+                            }
+                        }
+                    });
+                })
+
+        });
+    </script>
+</head>
+
+
+<body>
+
+<!--手机号码输入框代码-->
+<div class="container">
+    <div class="form-group">
+        <div class="col-lg-10">
+            <form id="loginForm" role="form" action="" method="post" class="form-horizontal">
+
+                <label for="mobile" class="">手机号码:</label>
+                <div class="input-group m-bot15">
+                    <input type="text" class="form-control" required id="mobile" name="mobile" placeholder="手机号码">
+                    <span class="input-group-btn">
+                         <input type="button" id="forcode" onclick="settime(this)" value="免费获取验证码"
+                                class="btn btn-success">
+                        </span>
+                </div>
+                <span id="msgDiv"></span>
+                <p class="help-block">请填写绑定手机号</p>
+                <label for="basic-url" class="">验证码：</label>
+                <div class="input-group">
+                    <input type="text" class="form-control" id="basic-url" name="code">
+                </div>
+                <p class="help-block"></p>
+                <div class="input-group">
+                    <input class="btn btn-success" type="button" id="loginButtonId" value="登录">
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>
