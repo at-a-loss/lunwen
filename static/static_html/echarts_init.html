@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <script src="{% static 'boot/js/jquery-2.2.1.min.js' %}"></script>
+    <script src="{% static 'echarts/echarts.min.js' %}"></script>
+</head>
+<body>
+
+<!-- 为 ECharts 准备一个具备大小（宽高）的 DOM -->
+<div id="main" style="width: 600px;height:400px;"></div>
+
+<script type="text/javascript">
+    // 1.基于准备好的dom容器，初始化echarts实例
+    var myChart = echarts.init(document.getElementById('main'));
+
+    // 2.指定图表的配置项和数据  用来指定echarts图表的各种数据
+    var option = {
+        title: {
+            text: 'Python183的示例',
+            show: true,
+            subtext: "这是副标题",
+        },
+        tooltip: {
+            showContent: true,
+        },
+        legend: {
+            data: ['销量1']
+        },
+        xAxis: {
+            data: []
+        },
+        yAxis: {},
+
+    };
+
+    // 3. 使用刚指定的配置项和数据显示图表。
+    myChart.setOption(option);
+
+    // 向后台发送ajax请求完成数据的获取
+    $.ajax({
+        url: "/user/get_data/",
+        datatype: "json",
+        type: 'get',
+        success: function (data) {
+            // 再次对表格的相关数据进行设置
+            myChart.setOption({
+                xAxis: {
+                    data: data.x,
+                },
+                yAxis: {},
+                series: [{
+                    name: '销量',
+                    type: 'bar',
+                    data: data.y,
+                }]
+            });
+        }
+    });
+
+
+</script>
+
+</body>
+</html>
