@@ -1,0 +1,154 @@
+<script>
+    $(function () {
+        $("#articleTable").jqGrid({
+            url: "/article/getALLArticle",
+            editurl: "/article/editArticle",
+            datatype: "json",
+            styleUI: "Bootstrap",
+            autowidth: true,
+            height: 500,
+            pager: "#articlePager",
+            rowNum: 5,
+            rowList: [5, 10, 15],
+            viewrecords: true,
+            rownumbers: true,
+            multiselect: true,
+            colNames: ["编号", "内容", "标题", "状态", "上传时间", "发布时间", "操作"],
+            colModel: [
+                {name: "id", hidden: true,},
+                {name: "content", hidden: true,},
+                {name: "title",},
+                {name: "status",},
+                {name: "createDate",},
+                {name: "publishDate",},
+                {
+                    name: "option",
+                    formatter: function (cellvalue, options, rowObject) {//JSON.stringify(rowObject).replace(/"/g, '&quot;
+                        var result = '';
+                        result += "<a href='javascript:void(0)' onclick=\"showModel('" + rowObject.id + "')\" class='btn btn-lg' title='查看详情'> <span class='glyphicon glyphicon-th-list'>编辑</span></a>" +
+                            "<a href='javascript:void(0)' onclick=\"delModel('" + rowObject.id + "')\" class='btn btn-lg' title='删除'> <span class='glyphicon glyphicon-king'>删除</span></a>";
+                        return result;
+                    }
+                },
+            ],
+        }).jqGrid("navGrid", "#articlePager", {add: false, edit: false}, {deltext: "删除"});
+
+    });
+
+    // 通过此事件触发填写文章相关信息的模态框
+    function showAddArticle() {
+        // 将表单相关的信息清空
+        $("#addArticleFrom")[0].reset();
+        // 将富文本框清空
+        KindEditor.html("#editor_id", "");
+        // 展示模态框
+        $("#myModal").modal('show');
+        KindEditor.create("#editor_id", {
+            uploadJson: "article/upload_img/",
+            fileManagerJson: "/article/get_all_img/",
+            allowFileManager: true,
+            afterBlur: function () {
+                // 在提交文章内容时必须加上  否则后台获取不到textarea输入框的内容
+                this.sync();    // 同步kindeditor框的内容到textarea中
+            }
+        });
+        $("#modal_footer").html('<button type="button" class="btn btn-primary" onclick="addArticle()">保存</button>\n' +
+            '<button type="button" class="btn btn-warning" data-dismiss="modal">取消</button>')
+    }
+
+    // 点击保存将文章的相关数据发送至后台
+    function addArticle() {
+        $.ajax({
+            url: "/article/add_article/",
+            type: "get",
+            datatype: "json",
+            data: $("#addArticleFrom").serialize(),     // 获取表单数据
+            success: function (data) {
+                // 根据后台返回的状态码进行不同的处理
+            }
+        });
+    }
+
+    // 点击编辑按钮对文章进行内容编辑
+    function showModel(id) {
+        // 根据jqgrid方法获取当前行对象的值
+        var data = $("#articleTable").jqGrid("getRowData", id);
+        // 追加值
+        $("#title").val(data.title);
+
+        $("#myModal").modal('show');
+        KindEditor.create("#editor_id", {
+            uploadJson: "article/upload_img/",
+            fileManagerJson: "/article/get_all_img/",
+            allowFileManager: true,
+            afterBlur: function () {
+                // 在提交文章内容时必须加上  否则后台获取不到textarea输入框的内容
+                this.sync();    // 同步kindeditor框的内容到textarea中
+            }
+        });
+        KindEditor.html("#editor_id", data.content);
+    }
+
+</script>
+
+<ul class="nav nav-tabs">
+    <li class="active"><a href="#" style="font-weight: bold">文章信息</a></li>
+    <li><a style="font-weight: bold" onclick="showAddArticle();">添加文章</a></li>
+    <div class="input-group" style="float: right;width: 30%">
+        <input type="text" id="esContent" class="form-control" placeholder="请输入搜索内容" aria-describedby="basic-addon2">
+        <span class="input-group-addon" id="basic-addon2"><a href="javascript:void(0)" id="searchES">点击搜索</a></span>
+    </div>
+</ul>
+<div class="panel panel-default">
+    <table id="articleTable"></table>
+    <div id="articlePager" style="width: auto;height: 50px"></div>
+</div>
+
+<div class="modal fade" id="myModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content" style="width:750px">
+            <!--模态框标题-->
+            <div class="modal-header">
+                <!--
+                    用来关闭模态框的属性:data-dismiss="modal"
+                -->
+                <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                <h4 class="modal-title">编辑用户信息</h4>
+            </div>
+
+            <!--模态框内容体-->
+            <div class="modal-body">
+                <form action="/article/editArticle/" class="form-horizontal"
+                      id="addArticleFrom">
+                    <div class="form-group">
+                        <label class="col-sm-1 control-label">标题</label>
+                        <div class="col-sm-5">
+                            <input type="text" name="title" id="title" placeholder="请输入标题" class="form-control">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-1 control-label">状态</label>
+                        <div class="col-sm-5">
+                            <select class="form-control" name="status" id="status">
+                                <option value="1">展示</option>
+                                <option value="2">不展示</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="col-sm-12">
+                            <textarea id="editor_id" name="content" style="width:700px;height:300px;">
+
+                            </textarea>
+                        </div>
+                    </div>
+                    <input id="addInsertImg" name="insertImg" hidden>
+                </form>
+            </div>
+            <!--模态页脚-->
+            <div class="modal-footer" id="modal_footer">
+
+            </div>
+        </div>
+    </div>
+</div>
