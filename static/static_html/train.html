@@ -1,0 +1,88 @@
+<script>
+    function changefn(ele){
+            console.log(ele)
+             $("#bannerTable").jqGrid('editGridRow', ele, {
+                height : 300,
+                reloadAfterSubmit : false
+              });
+         }
+    $(function () {
+        $('#bannerTable').jqGrid({
+            url: "/userapp/data/",
+            datatype: "json",
+            autowidth:true,
+            height:400,
+            page:1,
+            pager:"#page",
+            rowNum: 20,
+            rowList: [20,40],
+            editurl:"/userapp/opener/",
+            cellEdit:true,
+            styleUI: "Bootstrap",
+            colNames: ["ID", "头像", "姓名", "性别","电话","地址", "状态","部门", "创建时间", "操作"],
+            colModel: [
+                {name: "id"},
+                {
+                    name: "head", formatter: function (cellvalue, options, rowObject) {
+                        var content="<img style='height:30px;width:30px;' src='/static/media/"+  cellvalue+"'>";
+                        return content
+                    }
+                },
+                {name: "name"},
+                {name: "gender"},
+                {name: "phone",editable: true,},
+                {name: "addr"},
+                {name: "freeze",editable: true,edittype:'select',editoptions: {dataUrl:'/userapp/get_status/'}},
+                {name: 'dept_id',editable: true,edittype:'select',editoptions: {dataUrl:'/userapp/getdept/'}},
+                {name: "create_time",width:220},
+
+                {
+                    name: "option", formatter: function (cellvalue, options, rowObject) {
+                        var content="   <button class=\"btn btn-warning\" id=\"edit\" onclick=\"changefn(" + rowObject.id + ")\"><span class=\"glyphicon glyphicon-edit\"></span> 修</button>  "
+                        return content;
+                    }
+                },
+            ],
+        });
+
+    })
+    $("#vid").blur(function () {
+        $("#bannerTable").jqGrid('setGridParam',{
+            url:"/userapp/data/",//你的搜索程序地址
+            postData:{"id":$("#vid").val(),"name":$("#vname").val()}, //发送搜索条件
+            page:1
+        }).trigger("reloadGrid"); //重新载入
+    })
+     $("#vname").blur(function () {
+         $("#bannerTable").jqGrid('setGridParam',{
+            url:"/userapp/data/",//你的搜索程序地址
+            postData:{"id":$("#vid").val(),"name":$("#vname").val()}, //发送搜索条件
+            page:1
+        }).trigger("reloadGrid"); //重新载入
+    })
+
+</script>
+
+
+<div class="page-header">
+    <h2>员工管理</h2>
+</div>
+<ul class="nav nav-tabs ">
+    <li class="active"><a href="#"><b>员工信息</b></a></li>
+</ul>
+
+<div class="panel panel-default" style="padding: 40px">
+    <!-- jqgrid表格的容器 -->
+    id:<input type="text" id="vid">姓名:<input type="text" id="vname">
+    <table id="bannerTable"></table>
+    <div id="page"></div>
+    <div class="alert alert-success" role="alert" id="addBannerMsg" style="display: none">
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span
+                aria-hidden="true">&times;</span></button>
+        <strong id="msgShow"></strong>
+    </div>
+    <div id="bannerPagerNew" style="width: auto;height: 50px"></div>
+
+</div>
+
+
