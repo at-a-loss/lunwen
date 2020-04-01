@@ -1,5 +1,8 @@
 import json
 import os
+import random
+import string
+import time
 import uuid
 
 from django.core.paginator import Paginator
@@ -8,9 +11,8 @@ from django.shortcuts import render, redirect
 from django.views.decorators.csrf import csrf_exempt
 from redis import Redis
 
-from indexapp.models import Pic
-from utils.send_mess import YunPian
-from utils.random_code import get_mas
+from indexapp.captcha.image import ImageCaptcha
+from userapp.models import Users
 from ymy_cmfz import settings
 
 re = Redis(host='127.0.0.1', port=6379)
@@ -18,91 +20,62 @@ def index(request):
     return render(request, "index.html")
 
 def login(request):
+    name = request.COOKIES.get("name")
+    # pwd = request.COOKIES.get("pwd")
+    # user=User.objects.filter(username=name,pwd=pwd)
+    # flag = request.COOKIES.get("flag")
+    if name:
+        request.session["name"] = name
+        return redirect("indexapp:index")
     return render(request,"login.html")
 
-@csrf_exempt
-def get_code(request):
-    mobile = request.POST.get('mobile')
-    data=re.get(mobile+"_1")
-    if data:
-        return HttpResponse("0")
-    else:
-        mas=get_mas()
-        yunpian = YunPian(settings.APIKEY)
-        yunpian.send_message(mobile,mas)
-        re.setex(mobile+"_1",3*60, mas)
-        re.setex(mobile + "_2", 30 * 60, mas)
-        return HttpResponse("1")
 
-@csrf_exempt
 def loginlogic(request):
-    mobile = request.POST.get('mobile')
-    code = request.POST.get('code')
-    mas=re.get(mobile+"_2")
-    if mas:
-        if mas.decode()==code:
-            return HttpResponse("1")
-        else:
-            return HttpResponse("2")
-    return HttpResponse("0")
+    name=request.POST.get("name")
+    pwd=request.POST.get("pwd")
+    my=request.POST.get("my")
+    pw=request.POST.get("pw")
+    number=request.POST.get("number")
+    user=Users.objects.filter(name=name,password=pwd)
+    print(user)
+    captcha=request.session.get("captcha")
+    if captcha.lower()==number.lower():
+        if user:
+            re = redirect("indexapp:index")
+            request.session["name"]=user[0].name
+            if my:
+                re.set_cookie("name",name,max_age=7*24*3600)
+                # re.set_cookie("pwd",pwd,max_age=7*24*3600)
+                # re.set_cookie("flag",True,max_age=7*24*3600)
+            if pw:
+                re.set_cookie("pwu", name, max_age=7 * 24 * 3600)
+                re.set_cookie("pw",pw,max_age=7*24*3600)
+            return re
+        return HttpResponse("登录失败！")
+    return HttpResponse("验证码错误！")
 
-@csrf_exempt
-def add_pic(request):
-    title = request.POST.get("title")
-    status = request.POST.get("status")
-    pic = request.FILES.get("pic")
-    pic.name = str(uuid.uuid4()) + os.path.splitext(pic.name)[1]
-    Pic.objects.create(title=title,status=status,pic=pic)
-    return HttpResponse("1")
+def loginAjax(request):
+    pw=request.COOKIES.get("pw")
+    pwu=request.COOKIES.get("pwu")
+    name = request.GET.get("name")
+    user=Users.objects.filter(name=name)
+    if name==pwu:
+        if pw and pwu:
+            return HttpResponse(user[0].pwd)
+    return HttpResponse("")
 
+def captcha(request):
+    img=ImageCaptcha()
+    captcha="".join(random.sample(string.ascii_letters+string.digits,5))
+    request.session["captcha"]=captcha
+    print(captcha)
+    return HttpResponse(img.generate(captcha),"image/png")
 
-def data(request):
-    num=request.GET.get("page")
-    rownum=request.GET.get("rows")
-    emp=Pic.objects.all()
-    pagtor=Paginator(emp,rownum)
-    page=pagtor.page(num)
-    data={
-        "page":num,
-        "total":pagtor.num_pages,
-        "records":pagtor.count,
-        "rows":list(page)
-    }
-    emps=json.dumps(data,default=pic_default)
-    return HttpResponse(emps)
-
-@csrf_exempt
-def opener(request):
-    title=request.POST.get("title")
-    status=request.POST.get("status")
-    create_time=request.POST.get("create_time")
-    oper=request.POST.get("oper")
-    id = request.POST.get("id")
-    if oper=="edit":
-        p = Pic.objects.get(pk=id)
-        p.title=title
-        p.create_time=create_time
-        if status=="显示":
-            p.status=1
-        else:
-            p.status = 0
-        p.save()
-    elif oper=="del":
-        p = Pic.objects.get(pk=id)
-        p.delete()
-    return HttpResponse("1")
-
-def get_status(request):
-    sel = "<select>"
-    sel += "<option value='显示'>显示</option>"
-    sel += "<option value='不显示'>不显示</option>"
-    sel += "</select>"
-    return HttpResponse(sel)
-
-def pic_default(p):
-    if isinstance(p,Pic):
-        if p.status:
-            status="显示"
-        else:
-            status="不显示"
-        return {"id":p.id,"title":p.title,"status":status,"create_time":p.create_time.strftime("%Y-%m-%d %H:%M:%S"),"pic":p.pic.url}
+def captchaAjax(request):
+    val=request.POST.get("val")
+    captcha=request.session.get("captcha")
+    time.sleep(0.5)
+    if captcha.lower()==val.lower():
+        return HttpResponse("可用！！")
+    else:
+        return HttpResponse("不可用！！")
